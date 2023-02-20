@@ -15,7 +15,7 @@ headers = {
     'authorization': config['token']
 }
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(message)s', level=logging.INFO)
 
 API_URL = 'https://apiv3.fansly.com/api/v1/'
 
@@ -94,10 +94,6 @@ class Fetch:
                         self.data[obj].extend(response[obj])
                     elif obj == 'stats' and type(self.data[obj]) is dict:
                         pass
-                    else:
-                        logging.critical('Unsupported object type found while fetching ' + url)
-        else:
-            logging.critical('Unsupported response data type found while fetching ' + url)
 
         for post in response[self.relevant_field]:
             self.last_post = int(post[self.id_field])
@@ -120,11 +116,11 @@ def download_media(data, folder):
         cdn_filename = data['filename'] if 'filename' in data else data['location'].split('/')[-1]
         filename = datetime.datetime.utcfromtimestamp(data['createdAt']).strftime('%Y%m%d_%H%M%S_') + cdn_filename
         if filename.endswith('.mp4'):
-            os.makedirs(folder + 'vid', exist_ok=True)
-            filename = 'vid/' + filename
+            os.makedirs(folder + 'Videos', exist_ok=True)
+            filename = 'Videos/' + filename
         elif filename.endswith('.jpg') or filename.endswith('.png') or filename.endswith('.gif'):
-            os.makedirs(folder + 'pic', exist_ok=True)
-            filename = 'pic/' + filename
+            os.makedirs(folder + 'Pictures', exist_ok=True)
+            filename = 'Pictures/' + filename
         full_dl_path = folder + filename
         if not os.path.exists(full_dl_path):
             with open(full_dl_path, 'wb') as f:
@@ -133,8 +129,7 @@ def download_media(data, folder):
         else:
             return False
     else:
-        logging.warning('Media without URL')
-    return True
+        return True
 
 
 def main():
@@ -164,7 +159,7 @@ def main():
                         hit_end = config['quick_fetch']
             if hit_end:
                 break
-
+        logging.info('Finished downloading ' + account['username'])
     groups = Fetch('messaging/groups?sortOrder=1&flags=0&subscriptionTierId=&search=&limit=25', 'data', offset_field='offset', id_field='groupId')
     for group in groups:
         partner_account_id = group.get('partnerAccountId')
@@ -173,14 +168,14 @@ def main():
         partner_username = accountUsernames.get(partner_account_id)
         if partner_username is None:
             continue
-        logging.info('Downloading messages with ' + partner_username)
-        folder = '%s/%s/msg_' % (config['download_folder'], partner_username)
+        logging.info('Downloading media from messages from ' + partner_username)
+        folder = '%s/%s/Messages - ' % (config['download_folder'], partner_username)
 
         messages = Fetch('message?groupId=' + group['groupId'], 'messages')
         hit_end = False
         for message in messages:
             if message['senderId'] == group['account_id']:
-                continue  # Do not download my pics
+                continue  
 
             for media in message['attachments']:
                 mediaIds = []
